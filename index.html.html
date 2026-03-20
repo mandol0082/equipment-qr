@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>장비 QR 관리 시스템</title>
+<!-- QR: Google Chart API 이미지 방식 사용 -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222536;
+    --border: #2e3347;
+    --accent: #4ade80;
+    --accent2: #22d3ee;
+    --warn: #f59e0b;
+    --danger: #f87171;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'IBM Plex Sans KR', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+  }
+  .header-actions { display: flex; gap: 8px; }
+
+  /* ── Tab Nav ── */
+  .tab-nav {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0 24px;
+    gap: 0;
+  }
+  .tab-btn {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  /* ── Main Layout ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 16px;
+  }
+
+  /* ── Form ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1/-1; }
+  label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  input, select, textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    transition: border-color .2s;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 72px; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 9px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all .15s;
+  }
+  .btn-primary { background: var(--accent); color: #0f1117; }
+  .btn-primary:hover { background: #86efac; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: white; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-icon { padding: 7px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); cursor: pointer; color: var(--muted); transition: all .15s; }
+  .btn-icon:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ── Stats Bar ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+  .stat-value { font-size: 28px; font-weight: 700; font-family: var(--mono); }
+  .stat-card.green .stat-value { color: var(--accent); }
+  .stat-card.cyan .stat-value { color: var(--accent2); }
+  .stat-card.warn .stat-value { color: var(--warn); }
+  .stat-card.danger .stat-value { color: var(--danger); }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th {
+    background: var(--bg);
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  /* ── Status Badge ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+  .badge-ok { background: rgba(74,222,128,.12); color: var(--accent); }
+  .badge-ok::before { background: var(--accent); }
+  .badge-repair { background: rgba(245,158,11,.12); color: var(--warn); }
+  .badge-repair::before { background: var(--warn); }
+  .badge-broken { background: rgba(248,113,113,.12); color: var(--danger); }
+  .badge-broken::before { background: var(--danger); }
+  .badge-discard { background: rgba(100,116,139,.12); color: var(--muted); }
+  .badge-discard::before { background: var(--muted); }
+
+  .equip-id {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent2);
+    background: rgba(34,211,238,.08);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* ── Search / Filter Bar ── */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-wrap input { padding-left: 34px; }
+  .search-icon {
+    position: absolute;
+    left: 10px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  /* ── QR Panel ── */
+  .qr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+  }
+  .qr-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  .qr-card:hover { border-color: var(--accent); }
+  .qr-holder {
+    background: white;
+    padding: 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qr-label { font-size: 11px; text-align: center; color: var(--muted); }
+  .qr-name { font-size: 13px; font-weight: 600; text-align: center; }
+
+  /* ── Print Label ── */
+  .print-label-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+  .print-label {
+    border: 1.5px dashed var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .print-label .qr-holder { background: white; padding: 4px; border-radius: 4px; }
+  .print-label-name { font-size: 10px; font-weight: 600; text-align: center; }
+  .print-label-id { font-family: var(--mono); font-size: 8px; color: var(--muted); }
+  .print-label-loc { font-size: 8px; color: var(--muted); text-align: center; display: none; }
+
+  /* ── Modal ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .modal-close {
+    position: absolute;
+    top: 18px; right: 18px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+  /* ── Detail View ── */
+  .detail-row {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-key { color: var(--muted); min-width: 110px; flex-shrink: 0; }
+  .detail-val { font-weight: 500; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--accent);
+    color: #0f1117;
+    padding: 10px 20px;
+    border-radius: 99px;
+    font-weight: 600;
+    font-size: 13px;
+    z-index: 999;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ── Print styles ── */
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: white !important; color: black !important; margin: 0; }
+    header, .tab-nav, main, .filter-bar, .btn, .modal-backdrop { display: none !important; }
+    #print-area { display: block !important; position: static !important; }
+    .print-label-grid {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 8px !important;
+      padding: 10px !important;
+    }
+    .print-label {
+      border: 1px solid #999 !important;
+      background: white !important;
+      page-break-inside: avoid !important;
+    }
+    .print-label img { display: block !important; }
+    .print-label-loc { display: block !important; }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid.three { grid-template-columns: 1fr; }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* Log list */
+  .log-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .log-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+    background: var(--accent);
+  }
+  .log-time { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    장비 QR 관리 시스템
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary" onclick="exportData()" title="데이터 내보내기">📤 내보내기</button>
+    <label class="btn btn-secondary" style="cursor:pointer" title="데이터 불러오기">📥 불러오기<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+    <button class="btn btn-primary" onclick="openAddModal()">+ 장비 등록</button>
+  </div>
+</header>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('dashboard')">📊 대시보드</button>
+  <button class="tab-btn" onclick="switchTab('list')">📋 장비 목록</button>
+  <button class="tab-btn" onclick="switchTab('qr')">◼ QR 코드</button>
+  <button class="tab-btn" onclick="switchTab('log')">📜 이력 로그</button>
+</div>
+
+<main>
+
+  <!-- ── DASHBOARD ── -->
+  <div id="tab-dashboard" class="tab-panel active">
+    <div class="stats-bar" id="stats-bar"></div>
+    <div class="card">
+      <div class="card-title">최근 등록 장비</div>
+      <div class="table-wrap">
+        <table id="recent-table">
+          <thead>
+            <tr>
+              <th>장비ID</th><th>장비명</th><th>위치</th><th>상태</th><th>등록일</th>
+            </tr>
+          </thead>
+          <tbody id="recent-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LIST ── -->
+  <div id="tab-list" class="tab-panel">
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="장비명, ID, 위치 검색..." oninput="renderList()">
+      </div>
+      <select id="filter-cat" onchange="renderList()">
+        <option value="">전체 분류</option>
+        <option>기계설비</option>
+        <option>전기설비</option>
+        <option>계측장비</option>
+        <option>공구/소모품</option>
+        <option>사무비품</option>
+        <option>안전장비</option>
+        <option>기타</option>
+      </select>
+      <select id="filter-status" onchange="renderList()">
+        <option value="">전체 상태</option>
+        <option value="ok">정상</option>
+        <option value="repair">수리중</option>
+        <option value="broken">고장</option>
+        <option value="discard">폐기</option>
+      </select>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>장비ID</th><th>장비명</th><th>분류</th><th>위치</th><th>상태</th><th>담당자</th><th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="list-tbody"></tbody>
+        </table>
+      </div>
+      <div id="list-empty" class="empty-state" style="display:none">
+        <div class="empty-icon">📭</div>
+        <div>등록된 장비가 없거나 검색 결과가 없습니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── QR ── -->
+  <div id="tab-qr" class="tab-panel">
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="qr-search" placeholder="장비 검색..." oninput="renderQR()">
+      </div>
+      <button class="btn btn-secondary" onclick="printLabels()">🖨️ 라벨 인쇄</button>
+    </div>
+    <div class="card">
+      <div class="card-title">QR 코드 — 클릭 시 상세 정보</div>
+      <div id="qr-grid" class="qr-grid"></div>
+    </div>
+    <!-- print area -->
+    <div id="print-area" style="display:none">
+      <div id="print-labels" class="print-label-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── LOG ── -->
+  <div id="tab-log" class="tab-panel">
+    <div class="card">
+      <div class="card-title">활동 이력</div>
+      <div id="log-list"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── ADD/EDIT MODAL ── -->
+<div class="modal-backdrop" id="modal-add">
+  <div class="modal">
+    <div class="modal-title" id="modal-add-title">🆕 장비 등록</div>
+    <button class="modal-close" onclick="closeModal('modal-add')">✕</button>
+    <div class="form-grid three">
+      <div class="form-group">
+        <label>장비명 *</label>
+        <input type="text" id="f-name" placeholder="예: 소화펌프 A">
+      </div>
+      <div class="form-group">
+        <label>분류 *</label>
+        <select id="f-cat">
+          <option>기계설비</option>
+          <option>전기설비</option>
+          <option>계측장비</option>
+          <option>공구/소모품</option>
+          <option>사무비품</option>
+          <option>안전장비</option>
+          <option>기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>상태 *</label>
+        <select id="f-status">
+          <option value="ok">정상</option>
+          <option value="repair">수리중</option>
+          <option value="broken">고장</option>
+          <option value="discard">폐기</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>제조사</label>
+        <input type="text" id="f-maker" placeholder="예: 한화">
+      </div>
+      <div class="form-group">
+        <label>모델명</label>
+        <input type="text" id="f-model" placeholder="예: HWP-200">
+      </div>
+      <div class="form-group">
+        <label>시리얼 번호</label>
+        <input type="text" id="f-serial" placeholder="S/N">
+      </div>
+      <div class="form-group">
+        <label>설치 위치 *</label>
+        <input type="text" id="f-location" placeholder="예: 기계실 1층">
+      </div>
+      <div class="form-group">
+        <label>담당자</label>
+        <input type="text" id="f-manager" placeholder="성명">
+      </div>
+      <div class="form-group">
+        <label>구입일</label>
+        <input type="date" id="f-buydate">
+      </div>
+      <div class="form-group">
+        <label>내용연수 (년)</label>
+        <input type="number" id="f-lifespan" min="1" max="50" placeholder="예: 10">
+      </div>
+      <div class="form-group">
+        <label>구입가 (원)</label>
+        <input type="number" id="f-price" placeholder="예: 3500000">
+      </div>
+      <div class="form-group">
+        <label>점검주기</label>
+        <select id="f-cycle">
+          <option value="">없음</option>
+          <option>주 1회</option>
+          <option>월 1회</option>
+          <option>분기 1회</option>
+          <option>반기 1회</option>
+          <option>연 1회</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>메모</label>
+        <textarea id="f-memo" placeholder="특이사항, 수리 이력 등"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add')">취소</button>
+      <button class="btn btn-primary" onclick="saveEquipment()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── DETAIL MODAL ── -->
+<div class="modal-backdrop" id="modal-detail">
+  <div class="modal">
+    <div class="modal-title" id="detail-title">장비 상세정보</div>
+    <button class="modal-close" onclick="closeModal('modal-detail')">✕</button>
+    <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:16px">
+      <div class="qr-holder" id="detail-qr" style="background:white;padding:8px;border-radius:8px"></div>
+      <div style="flex:1" id="detail-info"></div>
+    </div>
+    <div id="detail-rows"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm" id="detail-del-btn" onclick="">삭제</button>
+      <button class="btn btn-secondary btn-sm" id="detail-edit-btn" onclick="">수정</button>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('modal-detail')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let equipments = JSON.parse(localStorage.getItem('eqm_data') || '[]');
+let logs = JSON.parse(localStorage.getItem('eqm_logs') || '[]');
+let editingId = null;
+
+// ── Sample Data ──
+if (equipments.length === 0) {
+  const samples = [
+    {name:'소화펌프 A',cat:'기계설비',status:'ok',maker:'한화',model:'HWP-200',serial:'SN20230101',location:'기계실 1층',manager:'김철수',buydate:'2023-01-15',lifespan:'15',price:'3500000',cycle:'월 1회',memo:'정기점검 완료'},
+    {name:'MCC 패널 #2',cat:'전기설비',status:'ok',maker:'LS산전',model:'MCC-400A',serial:'LS2022087',location:'전기실',manager:'이영희',buydate:'2022-06-01',lifespan:'20',price:'12000000',cycle:'분기 1회',memo:''},
+    {name:'유량계 B동',cat:'계측장비',status:'repair',maker:'Hach',model:'FH950',serial:'HC9988',location:'B동 유입구',manager:'박민준',buydate:'2021-03-10',lifespan:'10',price:'4200000',cycle:'반기 1회',memo:'센서 교체 중'},
+    {name:'산소발생기',cat:'기계설비',status:'ok',maker:'에어리퀴드',model:'OG-30',serial:'AL5566',location:'처리동 옥상',manager:'김철수',buydate:'2020-11-20',lifespan:'12',price:'8800000',cycle:'월 1회',memo:''},
+    {name:'안전모 세트',cat:'안전장비',status:'ok',maker:'성보',model:'SB-1000',serial:'',location:'창고 A',manager:'',buydate:'2024-01-01',lifespan:'3',price:'150000',cycle:'',memo:'10개 보관'},
+    {name:'자동탈수기',cat:'기계설비',status:'broken',maker:'서일환경',model:'BDP-500',serial:'SJ3311',location:'슬러지동',manager:'이영희',buydate:'2019-05-01',lifespan:'15',price:'22000000',cycle:'월 1회',memo:'모터 고장 — 수리 의뢰'},
+  ];
+  samples.forEach(s => addEquipment(s, false));
+}
+
+function genId() {
+  const prefix = 'EQ';
+  const num = String(Math.floor(Math.random()*90000)+10000);
+  return prefix + num;
+}
+
+function addEquipment(data, log=true) {
+  const eq = { id: genId(), ...data, created: new Date().toISOString() };
+  equipments.push(eq);
+  save();
+  if (log) addLog(`장비 등록: ${eq.name} (${eq.id})`);
+  return eq;
+}
+
+function save() {
+  localStorage.setItem('eqm_data', JSON.stringify(equipments));
+  localStorage.setItem('eqm_logs', JSON.stringify(logs));
+}
+
+function addLog(msg) {
+  logs.unshift({ msg, time: new Date().toISOString() });
+  if (logs.length > 200) logs.pop();
+  save();
+}
+
+// ── Status helpers ──
+const STATUS_MAP = {
+  ok: {label:'정상', cls:'badge-ok'},
+  repair: {label:'수리중', cls:'badge-repair'},
+  broken: {label:'고장', cls:'badge-broken'},
+  discard: {label:'폐기', cls:'badge-discard'},
+};
+function badge(s) {
+  const m = STATUS_MAP[s] || {label:s, cls:'badge-ok'};
+  return `<span class="badge ${m.cls}">${m.label}</span>`;
+}
+
+// ── Tab ──
+function switchTab(t) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (t === 'dashboard') renderDash();
+  if (t === 'list') renderList();
+  if (t === 'qr') renderQR();
+  if (t === 'log') renderLog();
+}
+
+// ── Dashboard ──
+function renderDash() {
+  const total = equipments.length;
+  const ok = equipments.filter(e=>e.status==='ok').length;
+  const repair = equipments.filter(e=>e.status==='repair').length;
+  const broken = equipments.filter(e=>e.status==='broken').length;
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-card green"><div class="stat-label">전체 장비</div><div class="stat-value">${total}</div></div>
+    <div class="stat-card cyan"><div class="stat-label">정상</div><div class="stat-value">${ok}</div></div>
+    <div class="stat-card warn"><div class="stat-label">수리중</div><div class="stat-value">${repair}</div></div>
+    <div class="stat-card danger"><div class="stat-label">고장</div><div class="stat-value">${broken}</div></div>
+  `;
+  const recent = [...equipments].sort((a,b)=>b.created.localeCompare(a.created)).slice(0,5);
+  document.getElementById('recent-tbody').innerHTML = recent.map(e=>`
+    <tr onclick="openDetail('${e.id}')" style="cursor:pointer">
+      <td><span class="equip-id">${e.id}</span></td>
+      <td>${e.name}</td>
+      <td>${e.location}</td>
+      <td>${badge(e.status)}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${e.created.slice(0,10)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">데이터 없음</td></tr>';
+}
+
+// ── List ──
+function renderList() {
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const cat = document.getElementById('filter-cat')?.value || '';
+  const st = document.getElementById('filter-status')?.value || '';
+  let filtered = equipments.filter(e => {
+    const match = !q || e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q) || e.location.toLowerCase().includes(q);
+    const matchCat = !cat || e.cat === cat;
+    const matchSt = !st || e.status === st;
+    return match && matchCat && matchSt;
+  });
+  const tbody = document.getElementById('list-tbody');
+  const empty = document.getElementById('list-empty');
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = filtered.map(e=>`
+    <tr>
+      <td><span class="equip-id">${e.id}</span></td>
+      <td><strong>${e.name}</strong></td>
+      <td style="color:var(--muted)">${e.cat}</td>
+      <td>${e.location}</td>
+      <td>${badge(e.status)}</td>
+      <td style="color:var(--muted)">${e.manager||'-'}</td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="openDetail('${e.id}')">상세</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ── QR ──
+let qrInstances = {};
+
+function makeQRUrl(eq, size) {
+  // WiFi QR 형식: 스마트폰이 WiFi 설정 화면으로 인식 → 절대 검색 안 함
+  // SSID 필드에 장비 정보를 넣으면 팝업으로 텍스트가 그대로 보임
+  const status = {"ok":"정상","repair":"수리중","broken":"고장","discard":"폐기"}[eq.status]||eq.status;
+  const ssid = eq.name + ' [' + eq.id + ']';
+  const pw = '위치:' + eq.location + ' | 상태:' + status + ' | 담당:' + (eq.manager||'-');
+  const text = 'WIFI:T:WPA;S:' + ssid + ';P:' + pw + ';;';
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(text);
+}
+
+function renderQR() {
+  const q = (document.getElementById('qr-search')?.value || '').toLowerCase();
+  const filtered = equipments.filter(e => !q || e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q));
+  const grid = document.getElementById('qr-grid');
+  grid.innerHTML = '';
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔲</div><div>장비 없음</div></div>';
+    return;
+  }
+  filtered.forEach(e => {
+    const qrUrl = makeQRUrl(e, 100);
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+    card.onclick = () => openDetail(e.id);
+    card.innerHTML = `
+      <div class="qr-holder" style="background:white;padding:6px;border-radius:6px">
+        <img src="${qrUrl}" width="90" height="90" alt="QR" style="display:block">
+      </div>
+      <div class="qr-name">${e.name}</div>
+      <div class="qr-label"><span class="equip-id">${e.id}</span></div>
+      ${badge(e.status)}
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function printLabels() {
+  if (!equipments.length) { toast('등록된 장비가 없습니다.'); return; }
+
+  // 새 창에서 인쇄 - 가장 안정적인 방법
+  const win = window.open('', '_blank', 'width=900,height=700');
+  const labels = equipments.map(e => {
+    const qrUrl = makeQRUrl(e, 120);
+    return `
+      <div class="label">
+        <img src="${qrUrl}" width="90" height="90" alt="QR">
+        <div class="name">${e.name}</div>
+        <div class="id">${e.id}</div>
+        <div class="loc">${e.location}</div>
+      </div>`;
+  }).join('');
+
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>장비 QR 라벨 인쇄</title>
+  <style>
+    body { margin: 10px; font-family: sans-serif; background: white; }
+    h2 { font-size: 14px; margin-bottom: 12px; color: #333; }
+    .grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    .label {
+      border: 1.5px solid #aaa;
+      border-radius: 6px;
+      padding: 8px;
+      width: 110px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      page-break-inside: avoid;
+      background: white;
+    }
+    .label img { display: block; }
+    .name { font-size: 10px; font-weight: 700; text-align: center; word-break: keep-all; }
+    .id   { font-size: 8px; color: #0066cc; font-family: monospace; }
+    .loc  { font-size: 8px; color: #666; text-align: center; }
+    @media print {
+      h2 { display: none; }
+      body { margin: 4px; }
+    }
+  </style></head><body>
+  <h2>📦 장비 QR 라벨 — 총 ${equipments.length}개 &nbsp;&nbsp;
+    <button onclick="window.print()" style="padding:4px 12px;cursor:pointer">🖨️ 인쇄</button>
+  </h2>
+  <div class="grid">${labels}</div>
+  </body></html>`);
+  win.document.close();
+  addLog('QR 라벨 인쇄');
+  renderLog();
+}
+
+// ── Log ──
+function renderLog() {
+  const list = document.getElementById('log-list');
+  if (!logs.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div><div>이력 없음</div></div>';
+    return;
+  }
+  list.innerHTML = logs.slice(0,50).map(l=>`
+    <div class="log-item">
+      <div class="log-dot"></div>
+      <div>
+        <div>${l.msg}</div>
+        <div class="log-time">${new Date(l.time).toLocaleString('ko-KR')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Modal Add/Edit ──
+function openAddModal(id=null) {
+  editingId = id;
+  const modal = document.getElementById('modal-add');
+  document.getElementById('modal-add-title').textContent = id ? '✏️ 장비 수정' : '🆕 장비 등록';
+  if (id) {
+    const e = equipments.find(x=>x.id===id);
+    if (e) {
+      document.getElementById('f-name').value = e.name||'';
+      document.getElementById('f-cat').value = e.cat||'기계설비';
+      document.getElementById('f-status').value = e.status||'ok';
+      document.getElementById('f-maker').value = e.maker||'';
+      document.getElementById('f-model').value = e.model||'';
+      document.getElementById('f-serial').value = e.serial||'';
+      document.getElementById('f-location').value = e.location||'';
+      document.getElementById('f-manager').value = e.manager||'';
+      document.getElementById('f-buydate').value = e.buydate||'';
+      document.getElementById('f-lifespan').value = e.lifespan||'';
+      document.getElementById('f-price').value = e.price||'';
+      document.getElementById('f-cycle').value = e.cycle||'';
+      document.getElementById('f-memo').value = e.memo||'';
+    }
+  } else {
+    ['f-name','f-maker','f-model','f-serial','f-location','f-manager','f-buydate','f-lifespan','f-price','f-memo'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('f-status').value = 'ok';
+    document.getElementById('f-cycle').value = '';
+  }
+  modal.classList.add('open');
+}
+
+function saveEquipment() {
+  const name = document.getElementById('f-name').value.trim();
+  const location = document.getElementById('f-location').value.trim();
+  if (!name) { toast('장비명을 입력하세요.'); return; }
+  if (!location) { toast('위치를 입력하세요.'); return; }
+
+  const data = {
+    name, cat: document.getElementById('f-cat').value,
+    status: document.getElementById('f-status').value,
+    maker: document.getElementById('f-maker').value,
+    model: document.getElementById('f-model').value,
+    serial: document.getElementById('f-serial').value,
+    location, manager: document.getElementById('f-manager').value,
+    buydate: document.getElementById('f-buydate').value,
+    lifespan: document.getElementById('f-lifespan').value,
+    price: document.getElementById('f-price').value,
+    cycle: document.getElementById('f-cycle').value,
+    memo: document.getElementById('f-memo').value,
+  };
+
+  if (editingId) {
+    const idx = equipments.findIndex(x=>x.id===editingId);
+    if (idx>=0) {
+      const prev = equipments[idx].status;
+      equipments[idx] = {...equipments[idx], ...data};
+      if (prev !== data.status) addLog(`상태 변경: ${name} (${editingId}) → ${STATUS_MAP[data.status]?.label}`);
+      else addLog(`장비 수정: ${name} (${editingId})`);
+      save();
+    }
+    toast('수정 완료!');
+  } else {
+    addEquipment(data);
+    toast('장비 등록 완료!');
+  }
+  closeModal('modal-add');
+  renderDash();
+  renderList();
+}
+
+// ── Detail ──
+function openDetail(id) {
+  const e = equipments.find(x=>x.id===id);
+  if (!e) return;
+  const modal = document.getElementById('modal-detail');
+  document.getElementById('detail-title').textContent = '📋 ' + e.name;
+
+  // QR
+  const qrHolder = document.getElementById('detail-qr');
+  qrHolder.innerHTML = `<img src="${makeQRUrl(e, 120)}" width="100" height="100" alt="QR" style="display:block">`;
+
+  // Info
+  document.getElementById('detail-info').innerHTML = `
+    <div style="margin-bottom:6px">${badge(e.status)}</div>
+    <div class="equip-id" style="margin-bottom:6px">${e.id}</div>
+    <div style="font-size:12px;color:var(--muted)">등록: ${e.created?.slice(0,10)||'-'}</div>
+    <div style="font-size:12px;color:var(--muted)">담당: ${e.manager||'-'}</div>
+  `;
+
+  // Rows
+  const fields = [
+    ['분류', e.cat], ['위치', e.location], ['제조사', e.maker||'-'], ['모델명', e.model||'-'],
+    ['시리얼', e.serial||'-'], ['구입일', e.buydate||'-'], ['내용연수', e.lifespan ? e.lifespan+'년' : '-'],
+    ['구입가', e.price ? Number(e.price).toLocaleString()+'원' : '-'],
+    ['점검주기', e.cycle||'-'], ['메모', e.memo||'-'],
+  ];
+  document.getElementById('detail-rows').innerHTML = fields.map(([k,v])=>`
+    <div class="detail-row"><div class="detail-key">${k}</div><div class="detail-val">${v}</div></div>
+  `).join('');
+
+  document.getElementById('detail-edit-btn').onclick = () => { closeModal('modal-detail'); openAddModal(id); };
+  document.getElementById('detail-del-btn').onclick = () => deleteEquipment(id);
+  modal.classList.add('open');
+}
+
+function deleteEquipment(id) {
+  if (!confirm('이 장비를 삭제하시겠습니까?')) return;
+  const e = equipments.find(x=>x.id===id);
+  equipments = equipments.filter(x=>x.id!==id);
+  addLog(`장비 삭제: ${e?.name} (${id})`);
+  save();
+  closeModal('modal-detail');
+  renderDash();
+  renderList();
+  toast('삭제되었습니다.');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Toast ──
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+// ── 내보내기 / 불러오기 ──
+function exportData() {
+  const payload = { equipments, logs, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url;
+  a.download = `장비관리_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📤 내보내기 완료!');
+  addLog('데이터 내보내기');
+  renderLog();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if (!payload.equipments || !Array.isArray(payload.equipments)) {
+        toast('❌ 올바른 파일이 아닙니다.'); return;
+      }
+      const existCount = equipments.length;
+      const newCount = payload.equipments.length;
+      if (existCount > 0) {
+        if (!confirm(`현재 저장된 장비 ${existCount}개가 있습니다.\n불러온 데이터(${newCount}개)로 덮어쓸까요?\n\n[확인] 덮어쓰기 / [취소] 합치기`)) {
+          // 합치기: ID 중복 제외하고 추가
+          const existIds = new Set(equipments.map(x=>x.id));
+          const merged = payload.equipments.filter(x=>!existIds.has(x.id));
+          equipments = [...equipments, ...merged];
+          logs = [...(payload.logs||[]), ...logs].slice(0,200);
+          addLog(`데이터 합치기: ${merged.length}개 추가`);
+          save(); renderDash(); renderList();
+          toast(`✅ ${merged.length}개 추가 완료!`);
+          return;
+        }
+      }
+      // 덮어쓰기
+      equipments = payload.equipments;
+      logs = payload.logs || [];
+      addLog(`데이터 불러오기: ${newCount}개 (${payload.exportedAt?.slice(0,10)||'날짜 미상'})`);
+      save(); renderDash(); renderList();
+      toast(`✅ ${newCount}개 불러오기 완료!`);
+    } catch {
+      toast('❌ 파일 읽기 오류');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ── Init ──
+renderDash();
+</script>
+</body>
+</html>
